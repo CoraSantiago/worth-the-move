@@ -120,6 +120,38 @@ div[data-testid="stButton"] button:disabled {
   cursor: not-allowed !important;
   transform: none !important;
 }      
+
+/* ===== FORCE DARK SELECTBOX (BaseWeb) ===== */
+
+/* Caixa fechada (o input/select em si) */
+div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+  background: rgba(255,255,255,0.06) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(122,214,201,0.25) !important;
+  border-radius: 12px !important;
+}
+
+/* Texto / placeholder / ícones internos */
+div[data-testid="stSelectbox"] div[data-baseweb="select"] * {
+  color: #ffffff !important;
+}
+
+/* Menu (dropdown) quando abre */
+ul[data-testid="stSelectboxVirtualDropdown"] {
+  background: #08141c !important;
+  border: 1px solid rgba(122,214,201,0.25) !important;
+}
+
+/* Cada item do dropdown */
+ul[data-testid="stSelectboxVirtualDropdown"] li[role="option"] {
+  background: #08141c !important;
+  color: #ffffff !important;
+}
+
+/* Hover do item */
+ul[data-testid="stSelectboxVirtualDropdown"] li[role="option"]:hover {
+  background: rgba(122,214,201,0.15) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -191,7 +223,7 @@ def pretty_base(name: str) -> str:
 base_names = [pretty_base(name.split(" - ")[0].strip()) for name in raw_names]
 
 # remove duplicados e ordena
-names = sorted(set(base_names))
+names = ["— Selecione —"] + sorted(set(base_names))
 
 def go_to_analysis():
     place = (st.session_state.get("selected_analysis") or "").strip()
@@ -475,4 +507,5 @@ if st.session_state.pending:
 
     time.sleep(REFRESH_EVERY_SECONDS)
     st.rerun()
+
 
