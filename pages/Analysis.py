@@ -43,11 +43,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
-
-
-
-
 st.markdown("""
 <style>
 /* =========================
@@ -114,10 +109,6 @@ section[data-testid="stSidebar"] div[data-testid="stButton"] > button:focus{
   box-shadow: 0 0 0 2px rgba(138,180,248,0.25);
 }
 
-/* =========================
-   2) Selectbox (baseweb) -> cara de input pill igual print
-   ========================= */
-
 /* Label (Saved analyses) */
 section[data-testid="stSidebar"] label[data-testid="stWidgetLabel"]{
   color: rgba(255,255,255,0.78) !important;
@@ -150,9 +141,6 @@ section[data-testid="stSidebar"] div[data-baseweb="select"] > div:focus-within{
   box-shadow: 0 0 0 2px rgba(138,180,248,0.25) !important;
 }
 
-/* =========================
-   3) Divider mais suave (opcional)
-   ========================= */
 section[data-testid="stSidebar"] hr{
   border: none;
   height: 1px;
@@ -160,7 +148,7 @@ section[data-testid="stSidebar"] hr{
   margin: 14px 0;
 }
             
-/* ✅ Força font-size no CONTROLE do select (fechado), sem mexer no menu */
+/* Força font-size no CONTROLE do select (fechado), sem mexer no menu */
 section[data-testid="stSidebar"] div[data-testid="stSelectbox"] div[data-baseweb="select"] > div{
   font-size: 9px !important;
 }
@@ -168,7 +156,7 @@ section[data-testid="stSidebar"] div[data-testid="stSelectbox"] div[data-baseweb
   font-size: inherit !important;
 }
             
-/* ✅ só o DROPDOWN (lista) do selectbox, sem mexer no resto */
+/* só o DROPDOWN (lista) do selectbox, sem mexer no resto */
 ul[data-testid="stSelectboxVirtualDropdown"] *{
   font-size: 9px !important;
   line-height: 1.15 !important;
@@ -1063,5 +1051,6 @@ with tabs[0]:
 
         else:
             st.dataframe(df, use_container_width=True)
+
 
 
