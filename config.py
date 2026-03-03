@@ -1,5 +1,7 @@
-BASE_URL = "https://app.noxus.ai/api/backend/" 
-API_KEY = "cUdnFFN7qj4VwBiv5xKzTLi-ouBpnTWg"
-WORKFLOW_ID = "bd1935c9-777e-4ae0-966e-ecddb1f3d3ed"
-INPUT_NAME = "Input 1"
-KB_ID = "3f19041e-a87d-4641-9592-66d9aec0c1c6"  
+import streamlit as st
+
+BASE_URL = st.secrets["BASE_URL"]
+API_KEY = st.secrets["API_KEY"]
+WORKFLOW_ID = st.secrets["WORKFLOW_ID"]
+INPUT_NAME = st.secrets["INPUT_NAME"]
+KB_ID = st.secrets["KB_ID"]
