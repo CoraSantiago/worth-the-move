@@ -3,3 +3,7 @@ showSidebarNavigation = false
 
 [theme]
 base="dark"
+backgroundColor="#050c14"
+secondaryBackgroundColor="#08141c"
+textColor="#e8f5f3"
+primaryColor="#7ad6c9"
