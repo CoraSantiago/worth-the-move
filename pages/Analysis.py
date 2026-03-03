@@ -207,7 +207,8 @@ with st.sidebar:
         if choice != place:
             st.session_state["place"] = choice
             st.rerun()
-
+    st.markdown("### Check another place") # Botão voltar (volta pra tua Home / Check_another_place) 
+    if st.button("⬅    Back", use_container_width=True): st.switch_page("Check_another_place.py")  # ajuste o nome/path se necessári
 
 
     st.markdown("---")
