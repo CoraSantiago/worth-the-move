@@ -1,0 +1,5 @@
+BASE_URL = "https://app.noxus.ai/api/backend/" 
+API_KEY = "cUdnFFN7qj4VwBiv5xKzTLi-ouBpnTWg"
+WORKFLOW_ID = "bd1935c9-777e-4ae0-966e-ecddb1f3d3ed"
+INPUT_NAME = "Input 1"
+KB_ID = "3f19041e-a87d-4641-9592-66d9aec0c1c6"  
