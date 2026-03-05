@@ -223,6 +223,35 @@ st.title(place)
 
 tabs = st.tabs(["Climate"])
 
+def _safe_df(df_: pd.DataFrame, max_rows: int = 500) -> pd.DataFrame:
+    """Evita travar a UI com df gigante."""
+    if df_ is None or len(df_) == 0:
+        return df_
+    return df_.head(max_rows)
+
+def render_tables_expander(tables: dict[str, pd.DataFrame], title: str = "Source tables", max_rows: int = 500):
+    """
+    tables: dict { "Nome da tabela": dataframe }
+    Mostra tudo dentro de um expander, com tabs.
+    """
+    # filtra vazios
+    items = [(k, v) for k, v in (tables or {}).items() if isinstance(v, pd.DataFrame) and len(v) > 0]
+    if not items:
+        return
+
+    with st.expander(f"📄 {title} ({len(items)})", expanded=False):
+        tab_names = [k for k, _ in items]
+        tabs_ = st.tabs(tab_names)
+
+        for (name, df_), t in zip(items, tabs_):
+            with t:
+                st.caption(f"Mostrando até {max_rows} linhas")
+                st.dataframe(
+                    _safe_df(df_, max_rows=max_rows),
+                    use_container_width=True,
+                    hide_index=True
+                )
+
 with tabs[0]:
     doc_name = place
 
@@ -976,9 +1005,9 @@ with tabs[0]:
 
                 with left:
                     st.markdown("<div style='max-width:230px'></div>", unsafe_allow_html=True)
-                    components.html(_kpi_card_html("Historical Max", max_temp, max_date), height=140)
+                    components.html(_kpi_card_html("Record Max", max_temp, max_date), height=140)
                     st.write("")
-                    components.html(_kpi_card_html("Historical Min", min_temp, min_date), height=140)
+                    components.html(_kpi_card_html("Record Min", min_temp, min_date), height=140)
 
                     # ❌ REMOVE daqui:
                     # render_sources_expander(hist_sources, title="Historic sources", align="left")
@@ -1023,6 +1052,18 @@ with tabs[0]:
 
                 # ✅ LINHA NOVA: SOURCES ALINHADAS NO MESMO Y
                 left_s, right_s = st.columns([0.55, 2.45])
+
+                # ✅ NOVO: expander com tabelas (visualização inline)
+                tables_to_show = {
+                    "Record máx and min (raw)": hist_df,
+                    "Climate (raw)": df,  # ou df_plot, se você preferir o já renomeado
+                }
+
+                # inclui as tabelas de desastres (uma aba por tipo)
+                for k, d in (dfs_dis or {}).items():
+                    tables_to_show[f"Disaster - {k} (raw)"] = d
+
+                render_tables_expander(tables_to_show, title="Source tables (view inside)", max_rows=500)
 
                 with left_s:
                     render_sources_expander(hist_sources, title="Hist sources", align="left")
