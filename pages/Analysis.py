@@ -528,16 +528,24 @@ def all_source_urls(df_: pd.DataFrame) -> list[str]:
 
     urls = []
 
-    # 1) colunas mais prováveis (se existirem)
+    # 1) colunas mais prováveis
     likely_cols = ["source_url", "information_source", "source", "url", "link", "Unnamed: 6"]
     for col in likely_cols:
         if col in df_.columns:
-            for v in df_[col].dropna().astype(str).tolist():
+            for v in df_[col].dropna().tolist():
+                if pd.isna(v):
+                    continue
+                if not isinstance(v, (str, bytes)):
+                    v = str(v)
                 urls += _URL_RE.findall(v)
 
     # 2) fallback: varre TODAS as células
-    flat = df_.astype(str).values.flatten().tolist()
+    flat = df_.values.flatten().tolist()
     for v in flat:
+        if pd.isna(v):
+            continue
+        if not isinstance(v, (str, bytes)):
+            v = str(v)
         urls += _URL_RE.findall(v)
 
     # dedup preservando ordem
@@ -548,6 +556,7 @@ def all_source_urls(df_: pd.DataFrame) -> list[str]:
         if u and u not in seen:
             out.append(u)
             seen.add(u)
+
     return out
 
 def render_sources_expander(urls: list[str], title: str = "Sources", align: str = "left"):
