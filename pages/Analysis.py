@@ -484,12 +484,11 @@ def first_source_url(df_):
     # tenta colunas conhecidas
     for col in ["source_url", "information_source", "Unnamed: 6"]:
         if col in df_.columns:
-            s = df_[col].dropna().astype(str)
+            for v in df_[col].dropna().tolist():
+                if not isinstance(v, str):
+                    v = str(v)
 
-            # se vier lista "['url1','url2']" ou "url1, url2", pega a primeira URL dentro
-            for v in s:
                 if "http://" in v or "https://" in v:
-                    # pega a primeira ocorrência de http(s) e corta no primeiro separador comum
                     start = v.find("http")
                     cand = v[start:]
                     for sep in ["',", '",', ",", " ", "]", ")"]:
@@ -498,7 +497,13 @@ def first_source_url(df_):
                     return cand.strip().strip("'").strip('"')
 
     # fallback varrendo células
-    for v in df_.astype(str).values.flatten():
+    for v in df_.values.flatten():
+        if pd.isna(v):
+            continue
+
+        if not isinstance(v, str):
+            v = str(v)
+
         if "http://" in v or "https://" in v:
             start = v.find("http")
             cand = v[start:]
