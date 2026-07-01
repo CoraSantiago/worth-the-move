@@ -1057,32 +1057,75 @@ def _short_host(url: str) -> str:
         return url
 
 def all_source_urls(df_: pd.DataFrame) -> list[str]:
-    """Extrai TODAS as URLs de um df (colunas conhecidas + varredura geral)."""
+    """
+    Extrai TODAS as URLs de um df com robustez:
+    - aceita string, número, NaN, lista, dict, bytes
+    - não quebra quando a KB traz tipos misturados
+    - dedup preservando ordem
+    """
     if df_ is None or len(df_) == 0:
         return []
 
+    def safe_text(v) -> str:
+        if v is None:
+            return ""
+
+        try:
+            if pd.isna(v):
+                return ""
+        except Exception:
+            pass
+
+        if isinstance(v, bytes):
+            return v.decode("utf-8", errors="replace")
+
+        if isinstance(v, (list, tuple, set)):
+            return " ".join(safe_text(x) for x in v)
+
+        if isinstance(v, dict):
+            return " ".join(
+                f"{safe_text(k)} {safe_text(val)}"
+                for k, val in v.items()
+            )
+
+        return str(v)
+
     urls = []
 
-    # 1) colunas mais prováveis (se existirem)
-    likely_cols = ["source_url", "information_source", "source", "url", "link", "Unnamed: 6"]
+    # 1) colunas mais prováveis
+    likely_cols = [
+        "source_url",
+        "information_source",
+        "source",
+        "url",
+        "link",
+        "Unnamed: 6",
+    ]
+
     for col in likely_cols:
         if col in df_.columns:
-            for v in df_[col].dropna().astype(str).tolist():
-                urls += _URL_RE.findall(v)
+            for v in df_[col].tolist():
+                txt = safe_text(v)
+                if txt:
+                    urls.extend(_URL_RE.findall(txt))
 
     # 2) fallback: varre TODAS as células
-    flat = df_.astype(str).values.flatten().tolist()
-    for v in flat:
-        urls += _URL_RE.findall(v)
+    for v in df_.values.flatten().tolist():
+        txt = safe_text(v)
+        if txt:
+            urls.extend(_URL_RE.findall(txt))
 
     # dedup preservando ordem
     out = []
     seen = set()
+
     for u in urls:
-        u = u.strip().rstrip(".,;")
+        u = str(u).strip().rstrip(".,;)]}'\"")
+
         if u and u not in seen:
             out.append(u)
             seen.add(u)
+
     return out
 
 def render_sources_expander(urls: list[str], title: str = "Sources", align: str = "left"):
@@ -1345,7 +1388,10 @@ def _count_events(df_):
 
 
 def _count_sources(df_: pd.DataFrame | None) -> int:
-    return len(all_source_urls(df_))
+    try:
+        return len(all_source_urls(df_))
+    except Exception:
+        return 0
 
 
 def _scope_from_df(df_: pd.DataFrame | None, place_text: str) -> str:
