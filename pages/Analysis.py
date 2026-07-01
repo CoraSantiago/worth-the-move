@@ -1018,34 +1018,59 @@ def short_domain(url: str) -> str:
         return "Source…"
 
 def first_source_url(df_):
+    """
+    Retorna a primeira URL encontrada no dataframe, sem quebrar se a KB trouxer
+    valores não-texto: NaN, float, list, dict, bytes etc.
+    """
     if df_ is None or len(df_) == 0:
         return None
 
-    # tenta colunas conhecidas
-    for col in ["source_url", "information_source", "Unnamed: 6"]:
+    def safe_text(v) -> str:
+        if v is None:
+            return ""
+
+        try:
+            if pd.isna(v):
+                return ""
+        except Exception:
+            pass
+
+        if isinstance(v, bytes):
+            return v.decode("utf-8", errors="replace")
+
+        if isinstance(v, (list, tuple, set)):
+            return " ".join(safe_text(x) for x in v)
+
+        if isinstance(v, dict):
+            return " ".join(
+                f"{safe_text(k)} {safe_text(val)}"
+                for k, val in v.items()
+            )
+
+        return str(v)
+
+    def extract_first_url(text: str):
+        urls = _URL_RE.findall(text or "")
+        if not urls:
+            return None
+
+        return str(urls[0]).strip().rstrip(".,;)]}'\"")
+
+    # 1) tenta colunas conhecidas primeiro
+    for col in ["source_url", "information_source", "source", "url", "link", "Unnamed: 6"]:
         if col in df_.columns:
-            s = df_[col].dropna().astype(str)
+            for v in df_[col].tolist():
+                txt = safe_text(v)
+                url = extract_first_url(txt)
+                if url:
+                    return url
 
-            # se vier lista "['url1','url2']" ou "url1, url2", pega a primeira URL dentro
-            for v in s:
-                if "http://" in v or "https://" in v:
-                    # pega a primeira ocorrência de http(s) e corta no primeiro separador comum
-                    start = v.find("http")
-                    cand = v[start:]
-                    for sep in ["',", '",', ",", " ", "]", ")"]:
-                        if sep in cand:
-                            cand = cand.split(sep, 1)[0]
-                    return cand.strip().strip("'").strip('"')
-
-    # fallback varrendo células
-    for v in df_.astype(str).values.flatten():
-        if "http://" in v or "https://" in v:
-            start = v.find("http")
-            cand = v[start:]
-            for sep in ["',", '",', ",", " ", "]", ")"]:
-                if sep in cand:
-                    cand = cand.split(sep, 1)[0]
-            return cand.strip().strip("'").strip('"')
+    # 2) fallback: varre todas as células
+    for v in df_.values.flatten().tolist():
+        txt = safe_text(v)
+        url = extract_first_url(txt)
+        if url:
+            return url
 
     return None
 
