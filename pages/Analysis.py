@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 import streamlit as st
 from noxus_kb import kb_list_documents, load_df_by_exact_name
 from i18n import tr, render_language_buttons
-
+APP_BUILD = "DEBUG_ANALYSIS_2026_07_01_2349"
 _URL_RE = re.compile(r"https?://[^\s\]\)\"'>]+", re.IGNORECASE)
 
 @st.cache_data(ttl=300)  # 5 min: reduz MUITO as chamadas
@@ -745,7 +745,7 @@ render_language_buttons(
 )
 
 st.title(place)
-
+st.caption(f"Build: {APP_BUILD}")
 main_panel = st.container()
 
 def apply_dark_plot_theme(fig):
