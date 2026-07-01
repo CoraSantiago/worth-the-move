@@ -2,6 +2,9 @@ import streamlit as st
 import time
 import urllib.parse
 import streamlit.components.v1 as components
+import json
+from i18n import tr, render_language_buttons
+from html import escape
 
 from noxus_workflow import trigger_workflow
 from noxus_kb import load_df_by_base_name, kb_list_documents
@@ -123,14 +126,16 @@ div[data-testid="stButton"] button:disabled {
 </style>
 """, unsafe_allow_html=True)
 
+render_language_buttons("home_lang_switcher")
+
 # ======================
 # HERO
 # ======================
 st.markdown(
-    """
+    f"""
     <div class="hero">
-      <h1>Worth the Move?</h1>
-      <p>So… where are you looking at?</p>
+      <h1>{tr("home_title")}</h1>
+      <p>{tr("home_subtitle")}</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -176,6 +181,9 @@ raw_names = [
     if (d.get("name") or "").strip()
 ]
 
+if raw_names:
+    st.session_state["_kb_names_cache"] = raw_names
+
 # pega só a parte antes de " - "
 def pretty_base(name: str) -> str:
     # remove extensão comum
@@ -191,7 +199,7 @@ def pretty_base(name: str) -> str:
 base_names = [pretty_base(name.split(" - ")[0].strip()) for name in raw_names]
 
 # remove duplicados e ordena
-names = ["— Selecione —"] + sorted(set(base_names))
+names = sorted(set(base_names))
 
 def go_to_analysis():
     place = (st.session_state.get("selected_analysis") or "").strip()
@@ -208,7 +216,7 @@ def on_pick_saved():
     st.session_state["place"] = place
 
 chosen = st.selectbox(
-    "Browse saved analyses",
+    tr("browse_saved"),
     options=names,
     index=0,
     key="selected_analysis",
@@ -246,73 +254,74 @@ buscar_dados = (qp.get("do_search") == "1")
 # 2) INPUT: NOVO LOCAL (OCULTO ATÉ CLICAR)
 # ======================
 
-with st.expander("Don’t see your place? Type it below.", expanded=False):
-    st.markdown("**Country, City**")
+with st.expander(tr("missing_place"), expanded=False):
+    st.markdown(f"**{tr('country_city')}**")
+
+   # placeholder_text = json.dumps(tr("place_placeholder"))
+    placeholder_text = escape(tr("place_placeholder"), quote=True)
 
     components.html(
-      """
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <input
-          id="typed_place_html"
-          type="text"
-          placeholder="Ex: Portugal, Maia"
-          autocomplete="off"
-          autocapitalize="off"
-          autocorrect="off"
-          spellcheck="false"
-          style="
-            width: 100%;
-            border-radius: 12px;
-            min-height: 56px;
-            font-size: 1.05rem;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(122,214,201,0.25);
-            padding: 0 14px;
-            color: white;
-            outline: none;
-            box-sizing: border-box;
-          "
-        />
-      </div>
+  """
+  <div style="display:flex; flex-direction:column; gap:12px;">
+    <input
+      id="typed_place_html"
+      type="text"
+      placeholder="__PLACEHOLDER__"
+      autocomplete="off"
+      autocapitalize="off"
+      autocorrect="off"
+      spellcheck="false"
+      style="
+        width: 100%;
+        border-radius: 12px;
+        min-height: 56px;
+        font-size: 1.05rem;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(122,214,201,0.25);
+        padding: 0 14px;
+        color: white;
+        outline: none;
+        box-sizing: border-box;
+      "
+    />
+  </div>
 
-      <script>
-        const inp = document.getElementById("typed_place_html");
-        const KEY = "wtm_typed_place";
+  <script>
+    const inp = document.getElementById("typed_place_html");
+    const KEY = "wtm_typed_place";
 
-        const prev = window.localStorage.getItem(KEY);
-        if (prev && !inp.value) inp.value = prev;
+    const prev = window.localStorage.getItem(KEY);
+    if (prev && !inp.value) inp.value = prev;
 
-        function setQueryParam(val) {
-          try {
-            const p = window.parent; // <<<<<< AQUI é a diferença
-            const url = new URL(p.location.href);
+    function setQueryParam(val) {
+      try {
+        const p = window.parent;
+        const url = new URL(p.location.href);
 
-            if (val) url.searchParams.set("typed_place", val);
-            else url.searchParams.delete("typed_place");
+        if (val) url.searchParams.set("typed_place", val);
+        else url.searchParams.delete("typed_place");
 
-            p.history.replaceState({}, "", url.toString());
-          } catch (e) {
-            // fallback: não quebra se o browser bloquear
-            console.log("Could not set parent query param", e);
-          }
-        }
+        p.history.replaceState({}, "", url.toString());
+      } catch (e) {
+        console.log("Could not set parent query param", e);
+      }
+    }
 
-        // seta a URL externa ao carregar
-        setQueryParam((inp.value || "").trim());
+    setQueryParam((inp.value || "").trim());
 
-        inp.addEventListener("input", () => {
-          const val = (inp.value || "").trim();
-          window.localStorage.setItem(KEY, val);
-          setQueryParam(val);
-        });
-      </script>
-      """,
-      height=90,
-  )
+    inp.addEventListener("input", () => {
+      const val = (inp.value || "").trim();
+      window.localStorage.setItem(KEY, val);
+      setQueryParam(val);
+    });
+  </script>
+  """.replace("__PLACEHOLDER__", placeholder_text),
+  height=90,
+)
 
     # botão REAL do streamlit (vai funcionar sempre)
     buscar_dados = st.button(
-    "Search Data",
+    tr("search_data"),
     key="search_data_btn",
     use_container_width=True,
     disabled=bool(st.session_state.get("pending") or st.session_state.get("search_locked")),
@@ -337,7 +346,7 @@ if buscar_dados:
 if st.session_state.get("search_locked") and not st.session_state.get("pending"):
     if not active_place:
         st.session_state.search_locked = False
-        st.warning("Selecione uma análise ou digite um local no formato País, Cidade.")
+        st.warning(tr("select_or_type_warning"))
         st.stop()
 
     # snapshot do que já existe treinado AGORA
@@ -348,7 +357,7 @@ if st.session_state.get("search_locked") and not st.session_state.get("pending")
     except Exception:
         st.session_state.pending_snapshot = set()
 
-    with st.spinner("Acionando workflow..."):
+    with st.spinner(tr("triggering_workflow")):
         run_id = trigger_workflow(active_place)
 
     st.session_state.pending = True
@@ -390,7 +399,7 @@ if st.session_state.get("search_locked") and not st.session_state.get("pending")
 if st.session_state.analysis_ready:
     base_pending = st.session_state.pending_place.split(" - ")[0].strip()
 
-    st.success(f"Your analysis is ready ✅ ({base_pending})")
+    st.success(tr("analysis_ready", place=base_pending))
 
     # Aqui você decide:
     # A) Ir direto pra página
@@ -417,7 +426,7 @@ if st.session_state.pending:
     # ✅ área dedicada (não “some” e não fica silencioso)
     box = st.container()
     with box:
-        st.info(f"Generating analysis for **{base_pending}**… This page will refresh automatically when it’s ready.")
+        st.info(tr("generating_analysis", place=base_pending))
         if st.session_state.pending_run_id:
             st.caption(f"run_id: {st.session_state.pending_run_id}")
 
@@ -436,7 +445,7 @@ if st.session_state.pending:
         st.rerun()
 
     if elapsed > TIMEOUT_SECONDS:
-        st.warning("This is taking longer than expected. Please try again in a moment.")
+        st.warning(tr("taking_longer"))
         st.session_state.pending = False
         st.session_state.search_locked = False
         st.session_state.pending_place = ""
@@ -475,6 +484,4 @@ if st.session_state.pending:
 
     time.sleep(REFRESH_EVERY_SECONDS)
     st.rerun()
-
-
 
