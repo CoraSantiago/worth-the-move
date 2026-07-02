@@ -100,7 +100,15 @@ def resolve_doc_by_suffixes(base_place: str, suffixes: list[str]) -> str | None:
 
 st.markdown("""
 <style>
-
+/* Esconde navegação automática do Streamlit multipage */
+div[data-testid="stSidebarNav"],
+section[data-testid="stSidebarNav"],
+[data-testid="stSidebarNav"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
 /* =========================
    Compacta o topo da página Analysis
    sem mexer nos botões de idioma
