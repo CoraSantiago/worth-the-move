@@ -3,7 +3,7 @@ import time
 import urllib.parse
 import streamlit.components.v1 as components
 import json
-from i18n import tr, render_language_buttons, render_feedback_button
+from i18n import tr, render_language_buttons
 from html import escape
 
 from noxus_workflow import trigger_workflow
@@ -127,7 +127,6 @@ div[data-testid="stButton"] button:disabled {
 """, unsafe_allow_html=True)
 
 render_language_buttons("home_lang_switcher")
-render_feedback_button()
 
 # ======================
 # HERO
@@ -398,29 +397,69 @@ if st.session_state.get("search_locked") and not st.session_state.get("pending")
 # AUTO-REFRESH: esperar aparecer na KB e carregar automaticamente
 # ======================
 if st.session_state.analysis_ready:
-    base_pending = st.session_state.pending_place.split(" - ")[0].strip()
+    base_pending = (
+        st.session_state.pending_place
+        .split(" - ")[0]
+        .strip()
+    )
 
-    st.success(tr("analysis_ready", place=base_pending))
+    st.success(
+        tr("analysis_ready", place=base_pending)
+    )
 
-    # Aqui você decide:
-    # A) Ir direto pra página
+    # Recarrega obrigatoriamente a lista de análises treinadas
+    # imediatamente antes de mudar de página.
+    try:
+        docs_ready = kb_list_documents(status="trained")
+
+        raw_ready = [
+            (doc.get("name") or "").strip()
+            for doc in docs_ready
+            if (doc.get("name") or "").strip()
+        ]
+
+        refreshed_bases = {
+            pretty_base(name.split(" - ")[0].strip())
+            for name in raw_ready
+        }
+
+        # A análise ainda não apareceu na lista completa.
+        # Aguarda mais 3 segundos e tenta novamente.
+        if base_pending not in refreshed_bases:
+            time.sleep(3)
+            st.rerun()
+
+        # Atualiza a lista que será usada pela página Analysis.
+        st.session_state["_kb_names_cache"] = raw_ready
+
+    except Exception:
+        # Não redireciona com a lista desatualizada.
+        time.sleep(3)
+        st.rerun()
+
+    # Define explicitamente a última análise gerada como ativa.
+    st.session_state["place"] = base_pending
+    st.query_params["place"] = base_pending
+
+    # Limpa apenas os estados do processo.
     st.session_state.analysis_ready = False
     st.session_state.pending = False
     st.session_state.search_locked = False
-    st.session_state["place"] = base_pending
-    st.switch_page("pages/Analysis.py")
+    st.session_state.pending_run_id = ""
+    st.session_state.pending_started = 0.0
 
-    # ou B) só recarregar a home
-    # st.session_state.analysis_ready = False
-    # st.session_state.pending = False
-    # st.rerun()
+    # Não altere selected_analysis aqui:
+    # esse estado pertence ao selectbox da página atual.
+
+    st.switch_page("pages/Analysis.py")
     
 if st.session_state.pending:
     pending_place = (st.session_state.pending_place or "").strip()
     base_pending = pending_place.split(" - ")[0].strip()
 
     REFRESH_EVERY_SECONDS = 3
-    TIMEOUT_SECONDS = 180  # sugiro 3 min
+    MIN_WAIT_SECONDS = 90   # 1 minuto e 30 segundos
+    TIMEOUT_SECONDS = 300   # limite máximo de 5 minutos
 
     elapsed = time.time() - float(st.session_state.pending_started or 0.0)
 
@@ -431,7 +470,9 @@ if st.session_state.pending:
         if st.session_state.pending_run_id:
             st.caption(f"run_id: {st.session_state.pending_run_id}")
 
-        prog = min(0.95, elapsed / TIMEOUT_SECONDS)  # não chega em 100% até concluir
+        # A barra leva 90 segundos para chegar a 100%.
+        # Se os dados ainda não estiverem prontos, permanece em 100% aguardando.
+        prog = min(1.0, elapsed / MIN_WAIT_SECONDS)
         st.progress(prog)
 
         cancel = False
@@ -471,9 +512,15 @@ if st.session_state.pending:
     except Exception:
         ready = False
 
-    if ready:
-      st.session_state.analysis_ready = True
-      st.rerun()
+    # Redireciona apenas depois de 90 segundos e quando os dados já estiverem prontos.
+    if ready and elapsed >= MIN_WAIT_SECONDS:
+        # Atualiza a lista compartilhada com os documentos que já estão treinados.
+        # Isso impede a página Analysis de usar uma lista antiga e selecionar
+        # automaticamente a primeira análise salva.
+        st.session_state["_kb_names_cache"] = raw_now
+        st.session_state["place"] = base_pending
+        st.session_state.analysis_ready = True
+        st.rerun()
 
         # (B) ou mandar direto pra página de Analysis:
         # st.session_state["place"] = base_pending
