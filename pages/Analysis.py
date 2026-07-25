@@ -653,12 +653,11 @@ if place:
         st.query_params["place"] = place
 
 # ======================
-# SIDEBAR DINÂMICA
-# Durante loading: só mostra "Check another place" + Back
-# Depois do loading: mostra análises salvas + Back
+# SIDEBAR SEM DUPLICAÇÃO DE WIDGETS
+# O seletor é dinâmico; o botão Voltar é renderizado uma única vez.
 # ======================
 
-sidebar_slot = st.sidebar.empty()
+saved_analyses_slot = st.sidebar.empty()
 
 
 def _sidebar_base_names():
@@ -681,59 +680,60 @@ def _sidebar_base_names():
     )
 
 
-def render_analysis_sidebar(show_saved: bool):
-    sidebar_slot.empty()
-
+def render_saved_analyses_sidebar():
+    """Preenche somente a área das análises salvas após o carregamento."""
     current_place = (st.session_state.get("place") or place or "").strip()
-    key_suffix = "ready" if show_saved else "loading"
+    base_names = _sidebar_base_names()
 
-    with sidebar_slot.container():
-        if show_saved:
-            base_names = _sidebar_base_names()
+    saved_analyses_slot.empty()
 
-            if base_names:
-                st.markdown(
-                    f"""
-                    <div class="wtm-sidebar-section-title">
-                        {tr("browse_saved")}
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+    if not base_names:
+        return
 
-                choice = st.selectbox(
-                    tr("browse_saved"),
-                    base_names,
-                    index=base_names.index(current_place) if current_place in base_names else 0,
-                    key=f"sidebar_place_select_{key_suffix}",
-                    label_visibility="collapsed",
-                )
-
-                if choice and choice != current_place:
-                    st.session_state["place"] = choice
-                    st.query_params["place"] = choice
-                    st.rerun()
-
+    with saved_analyses_slot.container():
         st.markdown(
             f"""
-            <div class="wtm-sidebar-spacer"></div>
             <div class="wtm-sidebar-section-title">
-                {tr("check_another_place")}
+                {tr("browse_saved")}
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        if st.button(
-            f"← {tr('back')}",
-            use_container_width=True,
-            key=f"sidebar_back_btn_{key_suffix}",
-        ):
-            st.switch_page("Check_another_place.py")
+        choice = st.selectbox(
+            tr("browse_saved"),
+            base_names,
+            index=base_names.index(current_place) if current_place in base_names else 0,
+            key="sidebar_place_select",
+            label_visibility="collapsed",
+        )
 
-        st.markdown("---")
+        if choice and choice != current_place:
+            st.session_state["place"] = choice
+            st.query_params["place"] = choice
+            st.rerun()
 
-render_analysis_sidebar(show_saved=False)
+
+# Parte fixa da sidebar: é criada uma única vez por execução.
+with st.sidebar:
+    st.markdown(
+        f"""
+        <div class="wtm-sidebar-spacer"></div>
+        <div class="wtm-sidebar-section-title">
+            {tr("check_another_place")}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if st.button(
+        f"← {tr('back')}",
+        use_container_width=True,
+        key="sidebar_back_btn",
+    ):
+        st.switch_page("Check_another_place.py")
+
+    st.markdown("---")
 
 if not place:
     st.warning(tr("no_place_selected"))
@@ -2139,7 +2139,7 @@ with main_panel:
     loading.empty()
 
     # Agora que os dados já carregaram, troca a sidebar para a versão completa
-    render_analysis_sidebar(show_saved=True)
+    render_saved_analyses_sidebar()
 
     # =========================
     # 2) RENDERIZA A UI FINAL
