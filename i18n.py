@@ -5,6 +5,7 @@ TEXTS = {
     "en": {
         "home_title": "Worth the Move?",
         "home_subtitle": "So… where are you looking at?",
+        "feedback_button": "Give feedback",
         "browse_saved": "Browse saved analyses",
         "missing_place": "Don’t see your place? Type it below.",
         "country_city": "Country, City",
@@ -109,6 +110,7 @@ TEXTS = {
     "pt_br": {
         "home_title": "Vale a mudança?",
         "home_subtitle": "Então… você está olhando para onde?",
+        "feedback_button": "Dê sua opinião",
         "browse_saved": "Ver análises salvas",
         "missing_place": "Não encontrou seu lugar? Digite abaixo.",
         "country_city": "País, Cidade",
@@ -212,6 +214,7 @@ TEXTS = {
     "pt_pt": {
         "home_title": "Vale a pena mudar?",
         "home_subtitle": "Então… está a olhar para onde?",
+        "feedback_button": "Dê-nos a sua opinião",
         "browse_saved": "Ver análises guardadas",
         "missing_place": "Não encontra o seu local? Escreva abaixo.",
         "country_city": "País, Cidade",
@@ -339,6 +342,75 @@ def tr(key: str, **kwargs) -> str:
 
     return text
 
+
+
+# Link público da pesquisa de satisfação.
+# Substitua pelo URL final do seu Google Forms.
+FEEDBACK_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScUdYqhBE_YV6eKZrldX3rZZll5GB0wSNgHDNr6Cy9oyV10Ew/viewform?usp=dialog"
+
+
+def render_feedback_button(form_url: str = FEEDBACK_FORM_URL) -> None:
+    """Renderiza um botão fixo no topo, visualmente à esquerda do Deploy."""
+    label = tr("feedback_button")
+
+    st.markdown(
+        f"""
+        <style>
+        .wtm-feedback-wrap {{
+            position: fixed;
+            top: 0.48rem;
+            right: 13.7rem;
+            z-index: 1000002;
+        }}
+
+        .wtm-feedback-wrap a {{
+            height: 2.25rem;
+            padding: 0 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.55rem;
+            border: 1px solid rgba(255, 126, 126, 0.78);
+            background: #b92f3a;
+            color: rgba(255,255,255,0.94) !important;
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 0.86rem;
+            font-weight: 700;
+            line-height: 1;
+            white-space: nowrap;
+            text-decoration: none !important;
+            box-shadow: 0 5px 16px rgba(185, 47, 58, 0.28);
+            backdrop-filter: blur(8px);
+            transition: all 0.18s ease;
+        }}
+
+        .wtm-feedback-wrap a:hover {{
+            background: #d9434f;
+            border-color: #ff9aa2;
+            color: #ffffff !important;
+            transform: translateY(-1px);
+        }}
+
+        @media (max-width: 760px) {{
+            .wtm-feedback-wrap {{
+                right: 4.2rem;
+            }}
+
+            .wtm-feedback-wrap a {{
+                padding: 0 10px;
+                font-size: 0.76rem;
+            }}
+        }}
+        </style>
+
+        <div class="wtm-feedback-wrap">
+            <a href="{form_url}" target="_blank" rel="noopener noreferrer">
+                {label}
+            </a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 def render_language_buttons(
     component_key: str = "lang_switcher",
