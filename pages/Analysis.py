@@ -1019,34 +1019,65 @@ def short_domain(url: str) -> str:
         return "Source…"
 
 def first_source_url(df_):
+    """
+    Retorna a primeira URL encontrada sem assumir que
+    todas as células do DataFrame são strings.
+    """
     if df_ is None or len(df_) == 0:
         return None
 
-    # tenta colunas conhecidas
-    for col in ["source_url", "information_source", "Unnamed: 6"]:
-        if col in df_.columns:
-            s = df_[col].dropna().astype(str)
+    def safe_text(v) -> str:
+        if v is None:
+            return ""
 
-            # se vier lista "['url1','url2']" ou "url1, url2", pega a primeira URL dentro
-            for v in s:
-                if "http://" in v or "https://" in v:
-                    # pega a primeira ocorrência de http(s) e corta no primeiro separador comum
-                    start = v.find("http")
-                    cand = v[start:]
-                    for sep in ["',", '",', ",", " ", "]", ")"]:
-                        if sep in cand:
-                            cand = cand.split(sep, 1)[0]
-                    return cand.strip().strip("'").strip('"')
+        if isinstance(v, bytes):
+            return v.decode("utf-8", errors="replace")
 
-    # fallback varrendo células
-    for v in df_.astype(str).values.flatten():
-        if "http://" in v or "https://" in v:
-            start = v.find("http")
-            cand = v[start:]
-            for sep in ["',", '",', ",", " ", "]", ")"]:
-                if sep in cand:
-                    cand = cand.split(sep, 1)[0]
-            return cand.strip().strip("'").strip('"')
+        if isinstance(v, (list, tuple, set)):
+            return " ".join(safe_text(x) for x in v)
+
+        if isinstance(v, dict):
+            return " ".join(
+                f"{safe_text(k)} {safe_text(value)}"
+                for k, value in v.items()
+            )
+
+        try:
+            missing = pd.isna(v)
+
+            if isinstance(missing, bool) and missing:
+                return ""
+        except Exception:
+            pass
+
+        return str(v)
+
+    likely_cols = [
+        "source_url",
+        "information_source",
+        "source",
+        "url",
+        "link",
+        "Unnamed: 6",
+    ]
+
+    # Primeiro procura nas colunas mais prováveis.
+    for col in likely_cols:
+        if col not in df_.columns:
+            continue
+
+        for value in df_[col].tolist():
+            match = _URL_RE.search(safe_text(value))
+
+            if match:
+                return match.group(0).rstrip(".,;)]}'\"")
+
+    # Depois procura em todas as células.
+    for value in df_.values.flatten().tolist():
+        match = _URL_RE.search(safe_text(value))
+
+        if match:
+            return match.group(0).rstrip(".,;)]}'\"")
 
     return None
 
