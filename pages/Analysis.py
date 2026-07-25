@@ -1020,8 +1020,8 @@ def short_domain(url: str) -> str:
 
 def first_source_url(df_):
     """
-    Retorna a primeira URL encontrada sem assumir que
-    todas as células do DataFrame são strings.
+    Retorna a primeira URL encontrada sem assumir que as células são strings.
+    Aceita valores simples, bytes, listas, tuplas, sets e dicionários.
     """
     if df_ is None or len(df_) == 0:
         return None
@@ -1044,7 +1044,6 @@ def first_source_url(df_):
 
         try:
             missing = pd.isna(v)
-
             if isinstance(missing, bool) and missing:
                 return ""
         except Exception:
@@ -1061,21 +1060,19 @@ def first_source_url(df_):
         "Unnamed: 6",
     ]
 
-    # Primeiro procura nas colunas mais prováveis.
+    # Primeiro procura nas colunas de fonte mais prováveis.
     for col in likely_cols:
         if col not in df_.columns:
             continue
 
         for value in df_[col].tolist():
             match = _URL_RE.search(safe_text(value))
-
             if match:
                 return match.group(0).rstrip(".,;)]}'\"")
 
-    # Depois procura em todas as células.
+    # Fallback: procura em todas as células.
     for value in df_.values.flatten().tolist():
         match = _URL_RE.search(safe_text(value))
-
         if match:
             return match.group(0).rstrip(".,;)]}'\"")
 
@@ -2049,7 +2046,41 @@ with main_panel:
                 max_temp_label = tr("max_temp_label")
                 min_temp_label = tr("min_temp_label")
 
-                df_plot = df.rename(columns={
+                # A KB pode devolver temperaturas como "33°C", "33,0" ou números.
+                # Converte tudo para float ANTES do gráfico, para o eixo Y ser linear
+                # em vez de categórico.
+                df_plot = df.copy()
+                df_plot["max_temp"] = pd.to_numeric(
+                    df_plot["max_temp"].apply(_num_from_any),
+                    errors="coerce",
+                )
+                df_plot["min_temp"] = pd.to_numeric(
+                    df_plot["min_temp"].apply(_num_from_any),
+                    errors="coerce",
+                )
+
+                # Remove apenas linhas sem nenhuma das duas temperaturas.
+                df_plot = df_plot.dropna(
+                    subset=["max_temp", "min_temp"],
+                    how="all",
+                )
+
+                # Calcula uma escala arredondada em passos de 5°C.
+                temp_values = pd.concat(
+                    [df_plot["max_temp"], df_plot["min_temp"]],
+                    ignore_index=True,
+                ).dropna()
+
+                y_range = None
+                if not temp_values.empty:
+                    import math
+                    y_min = math.floor((float(temp_values.min()) - 2) / 5) * 5
+                    y_max = math.ceil((float(temp_values.max()) + 2) / 5) * 5
+                    if y_min == y_max:
+                        y_max += 5
+                    y_range = [y_min, y_max]
+
+                df_plot = df_plot.rename(columns={
                     "max_temp": max_temp_label,
                     "min_temp": min_temp_label,
                 })
@@ -2068,29 +2099,41 @@ with main_panel:
                 )
                 fig.update_layout(hovermode="x unified")
                 fig.update_xaxes(tickformat="%m-%Y", dtick="M1")
+                fig.update_yaxes(
+                    type="linear",
+                    range=y_range,
+                    dtick=5,
+                    ticksuffix="°C",
+                )
 
-                if "rain" in df.columns:
-                    mask_rain = df["rain"].astype(str).str.upper().eq("X")
+                if "rain" in df_plot.columns:
+                    mask_rain = df_plot["rain"].astype(str).str.upper().eq("X")
                     if mask_rain.any():
-                        y_rain = df.loc[mask_rain, "max_temp"].astype(float) + 1
-                        fig.add_scatter(
-                            x=df.loc[mask_rain, "Date"],
-                            y=y_rain,
-                            mode="text",
-                            text=["🌧️"] * mask_rain.sum(),
-                            textposition="top center",
-                            hovertemplate=f"{tr('rain_hover')}<extra></extra>",
-                            showlegend=False,
-                        )
-                        fig.add_scatter(
-                            x=[None],
-                            y=[None],
-                            mode="text",
-                            text=["🌧️"],
-                            name=tr("rain_label"),
-                            showlegend=True,
-                            hoverinfo="skip",
-                        )
+                        y_rain = pd.to_numeric(
+                            df_plot.loc[mask_rain, max_temp_label],
+                            errors="coerce",
+                        ) + 1
+                        valid_rain = y_rain.notna()
+
+                        if valid_rain.any():
+                            fig.add_scatter(
+                                x=df_plot.loc[mask_rain, "Date"].loc[valid_rain],
+                                y=y_rain.loc[valid_rain],
+                                mode="text",
+                                text=["🌧️"] * int(valid_rain.sum()),
+                                textposition="top center",
+                                hovertemplate=f"{tr('rain_hover')}<extra></extra>",
+                                showlegend=False,
+                            )
+                            fig.add_scatter(
+                                x=[None],
+                                y=[None],
+                                mode="text",
+                                text=["🌧️"],
+                                name=tr("rain_label"),
+                                showlegend=True,
+                                hoverinfo="skip",
+                            )
 
     # acabou de calcular tudo -> some com o spinner
     loading.empty()
