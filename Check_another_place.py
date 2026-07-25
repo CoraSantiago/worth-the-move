@@ -3,7 +3,7 @@ import time
 import urllib.parse
 import streamlit.components.v1 as components
 import json
-from i18n import tr, render_language_buttons
+from i18n import tr, render_language_buttons, render_feedback_button
 from html import escape
 
 from noxus_workflow import trigger_workflow
@@ -127,6 +127,7 @@ div[data-testid="stButton"] button:disabled {
 """, unsafe_allow_html=True)
 
 render_language_buttons("home_lang_switcher")
+render_feedback_button()
 
 # ======================
 # HERO
