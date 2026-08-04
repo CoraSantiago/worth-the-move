@@ -122,7 +122,46 @@ div[data-testid="stButton"] button:disabled {
   opacity: 0.45 !important;
   cursor: not-allowed !important;
   transform: none !important;
-}      
+}
+
+/* =========================================================
+   FIX: textos legíveis mesmo quando o Streamlit está em LIGHT
+   Afeta somente os quatro pontos indicados na tela.
+   ========================================================= */
+
+/* 1) Subtítulo abaixo de "Worth the Move?" */
+.hero p {
+  color: rgba(255,255,255,0.78) !important;
+  opacity: 1 !important;
+}
+
+/* 2) Label "Browse saved analyses" */
+div[data-testid="stSelectbox"] label[data-testid="stWidgetLabel"],
+div[data-testid="stSelectbox"] label[data-testid="stWidgetLabel"] p,
+div[data-testid="stSelectbox"] label[data-testid="stWidgetLabel"] span {
+  color: rgba(255,255,255,0.78) !important;
+  opacity: 1 !important;
+}
+
+/* 3) Texto e seta do expander "Don't see your place?..." */
+div[data-testid="stExpander"] details > summary {
+  background: transparent !important;
+  color: rgba(255,255,255,0.92) !important;
+}
+
+div[data-testid="stExpander"] details > summary p,
+div[data-testid="stExpander"] details > summary span,
+div[data-testid="stExpander"] details > summary svg {
+  color: rgba(255,255,255,0.92) !important;
+  opacity: 1 !important;
+}
+
+/* 4) Label "Country, City" dentro do expander */
+div[data-testid="stExpander"] div[data-testid="stMarkdownContainer"] p,
+div[data-testid="stExpander"] div[data-testid="stMarkdownContainer"] strong {
+  color: rgba(255,255,255,0.78) !important;
+  opacity: 1 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -532,4 +571,3 @@ if st.session_state.pending:
 
     time.sleep(REFRESH_EVERY_SECONDS)
     st.rerun()
-
